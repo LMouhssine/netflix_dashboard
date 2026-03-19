@@ -1,0 +1,141 @@
+{% load static dashboard_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Netflix Dashboard{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/css/style.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">NETFLIX</div>
+    <div class="logo-sub">Analytics Dashboard</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Navigation</div>
+    <a href="{% url 'dashboard:index' %}" class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Vue générale
+    </a>
+    <a href="{% url 'dashboard:analysis' %}" class="nav-link {% if request.resolver_match.url_name == 'analysis' %}active{% endif %}">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      Analyse contenu
+    </a>
+
+    <div class="nav-section" style="margin-top:16px">Données</div>
+    <a href="/admin/dashboard/netflixtitle/" class="nav-link">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+      </svg>
+      Table des données
+    </a>
+    <a href="/admin/" class="nav-link">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Administration
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    Dataset : Netflix Shows<br>
+    Source : Kaggle — shivamb<br>
+    <span style="color:var(--red)">8 807</span> titres catalogués
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button id="sidebarToggle" style="background:none;border:none;color:var(--text-muted);cursor:pointer;display:none;padding:4px" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</span>
+    </div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <svg class="search-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Rechercher un titre, acteur…">
+        <div id="searchResults" class="search-results"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filters bar -->
+  <form method="get" class="filters-bar" id="filtersForm">
+    <div class="filter-group">
+      <label class="filter-label">Type</label>
+      <select name="type" class="filter-select">
+        <option value="">Tous</option>
+        <option value="Movie" {% if current_type == 'Movie' %}selected{% endif %}>Films</option>
+        <option value="TV Show" {% if current_type == 'TV Show' %}selected{% endif %}>Séries TV</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Audience</label>
+      <select name="rating_category" class="filter-select">
+        <option value="">Toutes</option>
+        <option value="Adult" {% if current_rating_cat == 'Adult' %}selected{% endif %}>Adulte</option>
+        <option value="Teen" {% if current_rating_cat == 'Teen' %}selected{% endif %}>Ado</option>
+        <option value="Kids" {% if current_rating_cat == 'Kids' %}selected{% endif %}>Enfants</option>
+        <option value="Unknown" {% if current_rating_cat == 'Unknown' %}selected{% endif %}>Inconnu</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Pays</label>
+      <select name="country" class="filter-select">
+        <option value="">Tous les pays</option>
+        {% for c in countries %}
+        <option value="{{ c }}" {% if current_country == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Année sortie (de)</label>
+      <input type="number" name="year_from" class="filter-input" style="width:90px"
+             value="{{ current_year_from }}" placeholder="2000" min="1940" max="2023">
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Année sortie (à)</label>
+      <input type="number" name="year_to" class="filter-input" style="width:90px"
+             value="{{ current_year_to }}" placeholder="2023" min="1940" max="2023">
+    </div>
+    <button type="submit" class="filter-btn filter-btn-apply">Filtrer</button>
+    <a href="{% url 'dashboard:index' %}" class="filter-btn filter-btn-reset" style="text-decoration:none">Réinitialiser</a>
+  </form>
+
+  <!-- Page content -->
+  <div class="page-body">
+    {% block content %}{% endblock %}
+  </div>
+
+</div><!-- /.main -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'dashboard/js/charts.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

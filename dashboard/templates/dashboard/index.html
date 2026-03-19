@@ -1,0 +1,202 @@
+{% extends 'dashboard/base.html' %}
+{% load dashboard_tags %}
+
+{% block title %}Vue Générale — Netflix Dashboard{% endblock %}
+{% block topbar_title %}Vue Générale{% endblock %}
+
+{% block content %}
+
+<!-- ══ Page header ══ -->
+<div class="page-header">
+  <div>
+    <h1 class="page-h1">Vue Générale</h1>
+    <p class="page-sub">Analyse complète du catalogue Netflix · {{ total|intcomma }} titres sélectionnés</p>
+  </div>
+</div>
+
+<!-- ══ KPI Cards ══ -->
+<div class="kpi-grid">
+
+  <div class="kpi-card">
+    <div class="kpi-label">Total Shows</div>
+    <div class="kpi-value" data-target="{{ total }}">{{ total|intcomma }}</div>
+    <div class="kpi-sub">Contenus catalogués</div>
+    <svg class="kpi-icon" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+    </svg>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Séries TV</div>
+    <div class="kpi-value" data-target="{{ tv_shows }}">{{ tv_shows|intcomma }}</div>
+    <div class="kpi-sub">{{ pct_tv }}% du total</div>
+    <svg class="kpi-icon" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+    </svg>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Films</div>
+    <div class="kpi-value" data-target="{{ movies }}">{{ movies|intcomma }}</div>
+    <div class="kpi-sub">{{ pct_movies }}% du total</div>
+    <svg class="kpi-icon" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+    </svg>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Pays distincts</div>
+    <div class="kpi-value" data-target="{{ country_count }}">{{ country_count|intcomma }}</div>
+    <div class="kpi-sub">Couverture mondiale</div>
+    <svg class="kpi-icon" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    </svg>
+  </div>
+
+</div>
+
+<!-- ══ Charts row 1 ══ -->
+<div class="charts-grid-main">
+
+  <!-- Pie chart -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Répartition type</div>
+      <span class="chart-badge">2 types</span>
+    </div>
+    <div style="position:relative;height:220px">
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-legend" id="pieLegend"></div>
+  </div>
+
+  <!-- Bar chart -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Top 10 genres</div>
+      <span class="chart-badge">Par nombre de titres</span>
+    </div>
+    <div style="position:relative;height:300px">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Charts row 2 ══ -->
+<div class="charts-grid-bottom">
+
+  <!-- Line chart -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Évolution par année de sortie</div>
+      <span class="chart-badge">2000 – 2023</span>
+    </div>
+    <div style="position:relative;height:220px">
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Donut chart -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Audience</div>
+      <span class="chart-badge">Rating category</span>
+    </div>
+    <div style="position:relative;height:170px">
+      <canvas id="donutChart"></canvas>
+    </div>
+    <div class="chart-legend" id="donutLegend"></div>
+  </div>
+
+</div>
+
+<!-- ══ Bottom row: Top countries + Recent ══ -->
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+
+  <!-- Top 10 countries -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Top pays</div>
+    </div>
+    {% if country_data %}
+    {% with max_val=country_data.0.count %}
+    <div class="country-list">
+      {% for item in country_data %}
+      <div class="country-row">
+        <span class="country-name">{{ item.country }}</span>
+        <div class="country-bar-wrap">
+          <div class="country-bar" style="width:{{ item.count|pct:max_val }}%"></div>
+        </div>
+        <span class="country-count">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endwith %}
+    {% else %}
+    <p class="muted" style="font-size:.8rem;padding:12px 0">Aucune donnée</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent additions -->
+  <div class="data-table-wrap">
+    <div class="data-table-header">
+      <span class="chart-title-dot"></span>
+      Ajouts récents
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Type</th>
+          <th>Pays</th>
+          <th>Année</th>
+          <th>Genre</th>
+          <th>Audience</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in recent %}
+        <tr>
+          <td class="td-title" title="{{ t.title }}">{{ t.title }}</td>
+          <td>
+            {% if t.type == 'Movie' %}
+            <span class="badge badge-movie">Film</span>
+            {% else %}
+            <span class="badge badge-tv">Série</span>
+            {% endif %}
+          </td>
+          <td>{{ t.country|default:"—"|truncatechars:18 }}</td>
+          <td>{{ t.release_year|default:"—" }}</td>
+          <td style="color:var(--text-muted);font-size:.75rem">{{ t.primary_genre|default:"—"|truncatechars:22 }}</td>
+          <td>
+            <span style="font-size:.7rem;padding:2px 6px;border-radius:4px;
+              {% if t.rating_category == 'Adult' %}background:rgba(229,9,20,.15);color:#E50914
+              {% elif t.rating_category == 'Teen' %}background:rgba(255,165,0,.15);color:#FFA500
+              {% elif t.rating_category == 'Kids' %}background:rgba(0,200,100,.15);color:#00C864
+              {% else %}background:rgba(100,100,100,.15);color:#888{% endif %}">
+              {{ t.rating_category }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="muted" style="text-align:center;padding:24px">
+          Aucune donnée. Importez d'abord le CSV : <code>python manage.py import_netflix</code>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  initPieChart({{ type_labels|safe }}, {{ type_values|safe }});
+  initBarChart({{ genre_labels|safe }}, {{ genre_values|safe }});
+  initLineChart({{ year_labels|safe }}, {{ year_values|safe }});
+  initDonutChart({{ rating_labels|safe }}, {{ rating_values|safe }});
+</script>
+{% endblock %}

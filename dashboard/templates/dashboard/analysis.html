@@ -1,0 +1,166 @@
+{% extends 'dashboard/base.html' %}
+{% load dashboard_tags %}
+
+{% block title %}Analyse Contenu — Netflix Dashboard{% endblock %}
+{% block topbar_title %}Analyse Contenu{% endblock %}
+
+{% block content %}
+
+<!-- ══ Page header ══ -->
+<div class="page-header">
+  <div>
+    <h1 class="page-h1">Analyse Contenu</h1>
+    <p class="page-sub">Durée · Saisons · Ratings · Tendances genres — {{ total|intcomma }} titres</p>
+  </div>
+</div>
+
+<!-- ══ Row 1 : Duration + Seasons ══ -->
+<div class="charts-grid-full" style="margin-bottom:16px">
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Distribution des durées (Films)</div>
+      <span class="chart-badge">en minutes</span>
+    </div>
+    <div style="position:relative;height:250px">
+      <canvas id="durationChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Distribution des saisons (Séries)</div>
+      <span class="chart-badge">top 15</span>
+    </div>
+    <div style="position:relative;height:250px">
+      <canvas id="seasonsChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 2 : Raw ratings + Added per year ══ -->
+<div class="charts-grid-full" style="margin-bottom:16px">
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Répartition par certification</div>
+      <span class="chart-badge">Ratings bruts</span>
+    </div>
+    <div style="position:relative;height:250px">
+      <canvas id="ratingRawChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="chart-title-dot"></span>Contenus ajoutés par année</div>
+      <span class="chart-badge">date_added</span>
+    </div>
+    <div style="position:relative;height:250px">
+      <canvas id="addedChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Genre dominant par année ══ -->
+{% if top_genre_table %}
+<div class="data-table-wrap" style="margin-bottom:16px">
+  <div class="data-table-header">
+    <span class="chart-title-dot"></span>
+    Genre dominant par année (2010–2023)
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Année</th>
+        <th>Genre #1</th>
+        <th>Titres</th>
+        <th style="width:200px">Part relative</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for year, data in top_genre_table %}
+      <tr>
+        <td style="font-weight:600;color:var(--text)">{{ year }}</td>
+        <td>{{ data.genre }}</td>
+        <td style="color:var(--red);font-weight:600">{{ data.count }}</td>
+        <td>
+          <div style="height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;background:var(--red);border-radius:3px;width:{{ data.count|pct:200 }}%"></div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ══ Titles table ══ -->
+<div class="data-table-wrap">
+  <div class="data-table-header">
+    <span class="chart-title-dot"></span>
+    Catalogue (top 50 par année)
+  </div>
+  <div style="overflow-x:auto">
+    <table class="data-table" style="min-width:800px">
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Type</th>
+          <th>Année</th>
+          <th>Durée</th>
+          <th>Pays</th>
+          <th>Genre</th>
+          <th>Audience</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in titles %}
+        <tr>
+          <td class="td-title" title="{{ t.title }}">{{ t.title }}</td>
+          <td>
+            {% if t.type == 'Movie' %}
+              <span class="badge badge-movie">Film</span>
+            {% else %}
+              <span class="badge badge-tv">Série</span>
+            {% endif %}
+          </td>
+          <td>{{ t.release_year|default:"—" }}</td>
+          <td style="color:var(--text-muted);font-size:.78rem">{{ t.duration|default:"—" }}</td>
+          <td style="font-size:.78rem">{{ t.country|default:"—"|truncatechars:16 }}</td>
+          <td style="font-size:.78rem;color:var(--text-muted)">{{ t.primary_genre|default:"—"|truncatechars:20 }}</td>
+          <td>
+            <span style="font-size:.7rem;padding:2px 6px;border-radius:4px;
+              {% if t.rating_category == 'Adult' %}background:rgba(229,9,20,.15);color:#E50914
+              {% elif t.rating_category == 'Teen' %}background:rgba(255,165,0,.15);color:#FFA500
+              {% elif t.rating_category == 'Kids' %}background:rgba(0,200,100,.15);color:#00C864
+              {% else %}background:rgba(100,100,100,.15);color:#888{% endif %}">
+              {{ t.rating_category }}
+            </span>
+          </td>
+          <td style="font-size:.75rem;color:var(--text-dim)">{{ t.rating|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="muted" style="text-align:center;padding:24px">
+          Aucun titre. Importez le CSV : <code>python manage.py import_netflix</code>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  initDurationChart({{ duration_labels|safe }}, {{ duration_values|safe }});
+  initSeasonsChart({{ seasons_labels|safe }}, {{ seasons_values|safe }});
+  initRatingRawChart({{ rating_raw_labels|safe }}, {{ rating_raw_values|safe }});
+  initAddedChart({{ added_labels|safe }}, {{ added_values|safe }});
+</script>
+{% endblock %}
